@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn import cross_validation
 from sklearn import metrics
@@ -19,6 +20,7 @@ ids = test_df['PassengerId'].values
 def clean_data (df):
     clean_df = df
     clean_df = clean_gender(clean_df)
+    clean_df = clean_cabin(clean_df)
     clean_df = clean_ages(clean_df)
     clean_df = clean_embarked(clean_df)
     clean_df = clean_fares(clean_df)
@@ -52,6 +54,16 @@ def clean_embarked (df):
     df.Embarked = df.Embarked.map( lambda x: Ports_dict[x]).astype(int)
     return df
 
+def clean_cabin (df):
+    def null_cabin(x):
+        try:
+            return x[0]
+        except TypeError:
+            return "N"
+
+    df['Cabin'] = df.Cabin.apply(null_cabin)
+    return df
+
 def clean_fares (df):
     median_fares = np.zeros((2,3))
     for i in range(0,2):
@@ -80,32 +92,26 @@ target = train_data[0::,0]
 #bags.fit(train_data[0::,1::], train_data[0::,0])
 #svm = SVC()
 #svm.fit(train_data[0::,1::], train_data[0::,0])
-
-acc = 0
-estimators = 10
-for n in range(1, 1000):
-    grad_boost = GradientBoostingClassifier(n_estimators = n)
-    scores = cross_validation.cross_val_predict(grad_boost, data, target, cv=5)
-    curr = metrics.accuracy_score(target, scores)
-    if curr > acc:
-        acc = curr
-        estimators = n
-
-print(estimators)
-print(acc)
-grad_boost = GradientBoostingClassifier(n_estimators = estimators)
+#nb = GaussianNB()
+#nb = nb.fit(data, target)
+grad_boost = GradientBoostingClassifier(n_estimators = 80)
 grad_boost.fit(data, target)
+
+#scores = cross_validation.cross_val_predict(grad_boost, data, target, cv=5)
+#print(metrics.accuracy_score(target, scores))
+
 
 print('Predicting...')
 #output = forest.predict(test_data).astype(int)
 #output = bags.predict(test_data).astype(int)
-#output = grad_boost.predict(test_data).astype(int)
 #output = svm.predict(test_data).astype(int)
+#output = nb.predict(test_data).astype(int)
+output = grad_boost.predict(test_data).astype(int)
 
 print('Writing...')
-#predictions_file = open("svm_results.csv", "w")
-#open_file_object = csv.writer(predictions_file)
-#open_file_object.writerow(["PassengerId","Survived"])
-#open_file_object.writerows(zip(ids, output))
-#predictions_file.close()
+predictions_file = open("grad_boost.csv", "w")
+open_file_object = csv.writer(predictions_file)
+open_file_object.writerow(["PassengerId","Survived"])
+open_file_object.writerows(zip(ids, output))
+predictions_file.close()
 print('Done.')
